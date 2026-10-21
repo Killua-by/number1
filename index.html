@@ -3,77 +3,70 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Кругосвет</title>
+<title>Space Scrapper — Сборщик лома</title>
 <style>
   * { box-sizing: border-box; }
-  html, body { margin:0; height:100%; overflow:hidden; background:#0f1117;
-    color:#cdd6f4; font-family: system-ui, -apple-system, sans-serif; user-select:none; }
-  canvas { display:block; cursor: crosshair; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#050510;
+    color:#e0e0ff; font-family: 'Courier New', Courier, monospace; user-select:none; }
+  canvas { display:block; }
 
-  #hud { position:fixed; top:16px; left:16px; width:260px;
-    display:flex; flex-direction:column; gap:8px; z-index:10; }
-  .bar { height:20px; background:rgba(0,0,0,0.55); border-radius:12px;
-    overflow:hidden; border:2px solid rgba(255,255,255,0.08); position:relative; }
-  .bar-label { position:absolute; inset:0; display:flex; align-items:center;
-    justify-content:center; font-size:11px; font-weight:bold;
-    text-shadow:0 1px 2px rgba(0,0,0,0.8); }
-  #hpFill { height:100%; width:100%; background:linear-gradient(90deg,#f38ba8,#eba0ac); transition:width .15s; }
-  #xpFill { height:100%; width:0%; background:linear-gradient(90deg,#a6e3a1,#94e2d5); transition:width .15s; }
-  #levelRow { display:flex; justify-content:space-between; padding:0 4px; font-size:14px; }
-  #levelRow strong { color:#89b4fa; font-size:16px; }
+  /* HUD */
+  #hud { position:fixed; top:16px; left:16px; z-index:10; pointer-events:none;
+    display:flex; flex-direction:column; gap:8px; text-shadow:0 0 8px rgba(0,255,255,0.5); }
+  .stat-box { background:rgba(5,10,25,0.7); border:1px solid #334;
+    padding:8px 16px; border-radius:8px; backdrop-filter:blur(4px); }
+  .scrap { color:#00ffff; font-size:20px; font-weight:bold; }
+  .hp-bar { width:200px; height:12px; background:#300; border-radius:6px; overflow:hidden;
+    border:1px solid #f38ba8; margin-top:4px; }
+  #hpFill { width:100%; height:100%; background:#f38ba8; transition:width .2s; }
 
-  #hint { position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-    color:#6c7086; font-size:13px; z-index:5; background:rgba(0,0,0,0.5);
-    padding:8px 16px; border-radius:12px; pointer-events:none; }
+  /* Кнопка улучшения */
+  #btnUpgrade { position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    z-index:10; padding:12px 32px; font-size:18px; font-family:inherit;
+    background:linear-gradient(180deg, #1e3a5f, #0f203a); color:#00ffff;
+    border:2px solid #00ffff; border-radius:8px; cursor:pointer;
+    box-shadow:0 0 15px rgba(0,255,255,0.3); transition:all .2s; font-weight:bold; }
+  #btnUpgrade:hover { background:linear-gradient(180deg, #2a4a7f, #1a3050);
+    box-shadow:0 0 25px rgba(0,255,255,0.6); transform:translateX(-50%) scale(1.05); }
+  #btnUpgrade:active { transform:translateX(-50%) scale(0.95); }
 
-  #levelup { position:fixed; inset:0; z-index:100; background:rgba(15,17,23,0.85);
+  /* Меню апгрейдов */
+  #upgradeMenu { position:fixed; inset:0; z-index:100; background:rgba(5,5,15,0.9);
     display:none; align-items:center; justify-content:center; flex-direction:column;
-    gap:28px; backdrop-filter:blur(4px); }
-  #levelup h2 { margin:0; font-size:32px; color:#89b4fa; }
-  #upgradeChoices { display:flex; gap:20px; flex-wrap:wrap; justify-content:center;
-    max-width:800px; padding:0 20px; }
-  .upgrade-card { background:linear-gradient(135deg,#313244,#45475a);
-    border:2px solid #585b70; color:#cdd6f4; padding:22px 26px; border-radius:18px;
-    font-size:15px; cursor:pointer; min-width:220px; transition:all .2s; text-align:left; }
-  .upgrade-card:hover { border-color:#89b4fa; transform:translateY(-6px);
-    box-shadow:0 10px 30px rgba(137,180,250,0.25); }
-  .upgrade-card strong { display:block; font-size:18px; color:#89b4fa; margin-bottom:6px; }
-  .upgrade-card span { color:#a6adc8; font-size:14px; }
-
-  #gameover { position:fixed; inset:0; z-index:200; background:rgba(15,17,23,0.92);
-    display:none; align-items:center; justify-content:center; flex-direction:column;
-    gap:24px; backdrop-filter:blur(4px); }
-  #gameover h1 { color:#f38ba8; font-size:48px; margin:0; }
-  #gameover p { font-size:20px; margin:0; }
-  #gameover button { padding:14px 36px; font-size:18px; border-radius:14px;
-    border:none; background:#89b4fa; color:#11111b; cursor:pointer;
-    font-weight:bold; transition:transform .15s; }
-  #gameover button:hover { transform:scale(1.05); }
+    gap:20px; backdrop-filter:blur(6px); }
+  #upgradeMenu h2 { margin:0; color:#00ffff; font-size:28px;
+    text-shadow:0 0 15px rgba(0,255,255,0.6); letter-spacing:2px; }
+  #upgradeMenu .scrap-info { color:#a6adc8; margin-bottom:10px; font-size:16px; }
+  .upgrade-grid { display:flex; gap:20px; flex-wrap:wrap; justify-content:center;
+    max-width:900px; padding:0 20px; }
+  .upg-card { background:linear-gradient(135deg,#151a2e,#0a0d1a);
+    border:2px solid #334; padding:20px; border-radius:12px;
+    min-width:200px; cursor:pointer; transition:all .2s; text-align:center; }
+  .upg-card:hover { border-color:#00ffff; box-shadow:0 0 20px rgba(0,255,255,0.3); transform:translateY(-5px); }
+  .upg-card.disabled { opacity:0.4; cursor:not-allowed; border-color:#333; transform:none; box-shadow:none; }
+  .upg-card strong { display:block; font-size:18px; color:#89b4fa; margin-bottom:8px; }
+  .upg-card .cost { color:#00ffff; font-size:14px; margin-top:12px; font-weight:bold; }
+  .upg-card .desc { color:#6c7086; font-size:12px; margin-top:6px; }
+  .upg-icon { font-size:32px; margin-bottom:10px; display:block; }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 
 <div id="hud">
-  <div id="levelRow">
-    <span>Уровень: <strong id="levelText">1</strong></span>
-    <span id="xpText">0 / 10</span>
+  <div class="stat-box">
+    <div>Скрап (Лом): <span class="scrap" id="scrapText">0</span></div>
+    <div>Корпус: <span id="hpText">100/100</span></div>
+    <div class="hp-bar"><div id="hpFill"></div></div>
   </div>
-  <div class="bar"><div id="hpFill"></div><div class="bar-label" id="hpText">100 / 100</div></div>
-  <div class="bar"><div id="xpFill"></div></div>
 </div>
 
-<div id="hint">WASD — двигаться · ЛКМ / Пробел — атака · Собирай ✨ и убивай врагов</div>
+<button id="btnUpgrade">⚙️ ВЕРСТАК [U]</button>
 
-<div id="levelup">
-  <h2>⬆ Уровень повышен!</h2>
-  <div id="upgradeChoices"></div>
-</div>
-
-<div id="gameover">
-  <h1>Ты пал...</h1>
-  <p id="finalScore"></p>
-  <button onclick="location.reload()">Играть заново</button>
+<div id="upgradeMenu">
+  <h2>🛠 КОСМИЧЕСКИЙ ВЕРСТАК</h2>
+  <div class="scrap-info">Доступно лома: <span id="scrapInMenu" style="color:#00ffff; font-weight:bold;">0</span></div>
+  <div class="upgrade-grid" id="upgradeGrid"></div>
 </div>
 
 <script>
@@ -83,372 +76,521 @@ let W, H;
 function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
 resize(); addEventListener('resize', resize);
 
-// ---------- МИР ----------
-const WORLD = { w: 3000, h: 3000 };
-const cam = { x: WORLD.w/2, y: WORLD.h/2 };
-
 // ---------- ИГРОК ----------
 const player = {
-  x: WORLD.w/2, y: WORLD.h/2, r: 18,
-  speed: 210, hp: 100, maxHp: 100,
-  xp: 0, level: 1, xpNext: 10,
-  damage: 12, attackRange: 70,
-  atkCdBase: 0.4, attackCooldown: 0,
-  magnet: 80, regen: 0,
+  x: 0, y: 0, angle: -Math.PI/2, speed: 0,
+  maxSpeed: 350, accel: 800, friction: 0.95,
+  hp: 100, maxHp: 100,
+  scrap: 0, magnetRadius: 120,
+  lvlHull: 1, lvlEngine: 1, lvlMagnet: 1,
+  damageFlash: 0
 };
 
+// ---------- МАССИВЫ ----------
+let stars = [], junk = [], asteroids = [], particles = [], floatingTexts = [];
+let keys = {};
+let menuOpen = false;
+let gameTime = 0;
+
 // ---------- ВВОД ----------
-const keys = {};
 addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
-  if (e.code === 'Space') { tryAttack(); e.preventDefault(); }
+  if (e.key.toLowerCase() === 'u' || e.key === 'Escape') toggleMenu();
+  if (e.code === 'Space') e.preventDefault();
 });
 addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-addEventListener('mousedown', e => { if (e.button === 0) tryAttack(); });
+document.getElementById('btnUpgrade').onclick = toggleMenu;
 
-// ---------- СУЩНОСТИ ----------
-let orbs = [], enemies = [], particles = [], decorations = [];
-let attackFlash = 0, upgradeActive = false, alive = true;
-
-for (let i = 0; i < 250; i++) {
-  decorations.push({
-    x: Math.random()*WORLD.w, y: Math.random()*WORLD.h,
-    r: 20 + Math.random()*40,
-    color: Math.random() > 0.5 ? '166,227,161' : '137,180,250'
-  });
-}
-for (let i = 0; i < 100; i++) spawnOrb();
-for (let i = 0; i < 18; i++) spawnEnemy();
-
-function spawnOrb(x, y, val = 1) {
-  orbs.push({
-    x: x ?? Math.random()*WORLD.w,
-    y: y ?? Math.random()*WORLD.h,
-    r: 8, val, pulse: Math.random()*Math.PI*2
-  });
-}
-function spawnEnemy() {
-  let x, y, tries = 0;
-  do {
-    x = 100 + Math.random()*(WORLD.w-200);
-    y = 100 + Math.random()*(WORLD.h-200);
-    tries++;
-  } while (Math.hypot(x-player.x, y-player.y) < 450 && tries < 20);
-  const baseHp = 20 + player.level * 4;
-  enemies.push({
-    x, y, r: 14 + Math.random()*10,
-    hp: baseHp, maxHp: baseHp,
-    speed: 45 + Math.random()*25,
-    damage: 5, attackCd: 0
-  });
-}
-setInterval(() => { if (enemies.length < 45) spawnEnemy(); }, 1800);
-setInterval(() => { if (orbs.length < 220) spawnOrb(); }, 400);
-
-// ---------- АТАКА ----------
-function tryAttack() {
-  if (upgradeActive || !alive || player.attackCooldown > 0) return;
-  player.attackCooldown = player.atkCdBase;
-  attackFlash = 0.15;
-  for (const e of enemies) {
-    const dx = e.x - player.x, dy = e.y - player.y;
-    const d = Math.hypot(dx, dy) || 1;
-    if (d < player.attackRange + e.r) {
-      e.hp -= player.damage;
-      e.x += dx/d * 24; e.y += dy/d * 24;
-      addParticles(e.x, e.y, '#f38ba8', 5);
-    }
-  }
-}
-
-function addParticles(x, y, color, n) {
-  for (let i = 0; i < n; i++) {
-    const a = Math.random()*Math.PI*2, sp = 100 + Math.random()*160;
-    particles.push({
-      x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp,
-      life: 0.5, maxLife: 0.5, color, r: 2 + Math.random()*3
-    });
-  }
-}
-
-// ---------- АПГРЕЙДЫ ----------
-const upgrades = [
-  { name:'Живучесть',     desc:'+30 к макс. HP',           apply:()=>{ player.maxHp += 30; player.hp += 30; } },
-  { name:'Скорость',      desc:'+15% к скорости',          apply:()=>{ player.speed *= 1.15; } },
-  { name:'Сила удара',    desc:'+6 к урону',               apply:()=>{ player.damage += 6; } },
-  { name:'Длинные руки',  desc:'+25 к радиусу атаки',      apply:()=>{ player.attackRange += 25; } },
-  { name:'Магнит',        desc:'+50 к радиусу сбора',      apply:()=>{ player.magnet += 50; } },
-  { name:'Регенерация',   desc:'+1.5 HP/сек',              apply:()=>{ player.regen += 1.5; } },
-  { name:'Скорость атаки',desc:'-20% к перезарядке',       apply:()=>{ player.atkCdBase *= 0.8; } },
-  { name:'Лекарь',        desc:'Полное лечение',           apply:()=>{ player.hp = player.maxHp; } },
-];
-
-function showUpgrades() {
-  upgradeActive = true;
-  const pool = [...upgrades].sort(() => Math.random() - 0.5).slice(0, 3);
-  const box = document.getElementById('upgradeChoices');
-  box.innerHTML = '';
-  document.getElementById('levelup').style.display = 'flex';
-  pool.forEach(u => {
-    const b = document.createElement('button');
-    b.className = 'upgrade-card';
-    b.innerHTML = `<strong>${u.name}</strong><span>${u.desc}</span>`;
-    b.onclick = () => {
-      u.apply();
-      document.getElementById('levelup').style.display = 'none';
-      upgradeActive = false;
-    };
-    box.appendChild(b);
+// ---------- ГЕНЕРАЦИЯ КОСМОСА ----------
+// Звёзды (параллакс)
+for (let i = 0; i < 300; i++) {
+  stars.push({
+    x: Math.random()*3000 - 1500, y: Math.random()*3000 - 1500,
+    z: Math.random() * 2 + 0.5, // глубина для параллакса
+    size: Math.random() * 2 + 0.5
   });
 }
 
-// ---------- ИГРОВОЙ ЦИКЛ ----------
+function spawnJunk() {
+  const type = Math.random() > 0.5 ? 'gear' : 'plate';
+  junk.push({
+    x: player.x + (Math.random()-0.5) * 1500,
+    y: player.y + (Math.random()-0.5) * 1500,
+    r: 8 + Math.random()*10,
+    angle: Math.random()*Math.PI*2,
+    spin: (Math.random()-0.5)*2,
+    type, value: Math.floor(5 + Math.random()*10)
+  });
+}
+
+function spawnAsteroid() {
+  asteroids.push({
+    x: player.x + (Math.random()-0.5) * 1200,
+    y: player.y + (Math.random()-0.5) * 1200,
+    r: 20 + Math.random()*30,
+    vx: (Math.random()-0.5)*60,
+    vy: (Math.random()-0.5)*60,
+    rot: Math.random()*Math.PI*2,
+    rotSpeed: (Math.random()-0.5)*1.5
+  });
+}
+
+for (let i = 0; i < 60; i++) spawnJunk();
+for (let i = 0; i < 10; i++) spawnAsteroid();
+
+// Интервалы спавна
+setInterval(() => { if (junk.length < 150 && !menuOpen) spawnJunk(); }, 200);
+setInterval(() => { if (asteroids.length < 25 && !menuOpen) spawnAsteroid(); }, 3000);
+
+// ---------- ЛОГИКА ИГРЫ ----------
 let last = performance.now();
 function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
-  if (alive) update(dt);
+  if (!menuOpen) { update(dt); gameTime += dt; }
   render();
-  updateHUD();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
 function update(dt) {
-  if (upgradeActive) return;
+  // Управление
+  let thrust = 0, turn = 0;
+  if (keys['w'] || keys['arrowup']) thrust = 1;
+  if (keys['s'] || keys['arrowdown']) thrust = -0.5;
+  if (keys['a'] || keys['arrowleft']) turn = -1;
+  if (keys['d'] || keys['arrowright']) turn = 1;
 
-  // движение
-  let mx = 0, my = 0;
-  if (keys['w'] || keys['arrowup'])    my -= 1;
-  if (keys['s'] || keys['arrowdown'])  my += 1;
-  if (keys['a'] || keys['arrowleft'])  mx -= 1;
-  if (keys['d'] || keys['arrowright']) mx += 1;
-  const len = Math.hypot(mx, my);
-  if (len > 0) { mx /= len; my /= len; }
-  player.x += mx * player.speed * dt;
-  player.y += my * player.speed * dt;
-  player.x = Math.max(player.r, Math.min(WORLD.w - player.r, player.x));
-  player.y = Math.max(player.r, Math.min(WORLD.h - player.r, player.y));
+  player.angle += turn * 3 * dt;
+  if (thrust > 0) player.speed += player.accel * thrust * dt;
+  else if (thrust < 0) player.speed += player.accel * thrust * dt;
+  else player.speed *= Math.pow(player.friction, dt * 60);
 
-  // камера
-  cam.x += (player.x - cam.x) * Math.min(1, dt * 8);
-  cam.y += (player.y - cam.y) * Math.min(1, dt * 8);
+  player.speed = Math.max(-player.maxSpeed*0.5, Math.min(player.maxSpeed, player.speed));
 
-  // реген, кулдаун, вспышка
-  if (player.regen) player.hp = Math.min(player.maxHp, player.hp + player.regen * dt);
-  if (player.attackCooldown > 0) player.attackCooldown -= dt;
-  if (attackFlash > 0) attackFlash -= dt;
+  // Движение
+  player.x += Math.cos(player.angle) * player.speed * dt;
+  player.y += Math.sin(player.angle) * player.speed * dt;
 
-  // сферы
-  for (let i = orbs.length - 1; i >= 0; i--) {
-    const o = orbs[i];
-    const dx = player.x - o.x, dy = player.y - o.y;
-    const d = Math.hypot(dx, dy) || 1;
-    if (d < player.magnet) {
-      o.x += dx/d * 320 * dt; o.y += dy/d * 320 * dt;
+  // Частицы двигателя
+  if (thrust > 0 && Math.random() < 0.8) {
+    const spread = (Math.random()-0.5)*0.4;
+    particles.push({
+      x: player.x - Math.cos(player.angle+spread)*15,
+      y: player.y - Math.sin(player.angle+spread)*15,
+      vx: -Math.cos(player.angle)*100 + (Math.random()-0.5)*50,
+      vy: -Math.sin(player.angle)*100 + (Math.random()-0.5)*50,
+      life: 0.4, maxLife: 0.4, color: '#00ffff', r: 3
+    });
+  }
+
+  // Сбор лома (магнит)
+  for (let i = junk.length - 1; i >= 0; i--) {
+    const j = junk[i];
+    j.angle += j.spin * dt;
+    const dx = player.x - j.x, dy = player.y - j.y;
+    const dist = Math.hypot(dx, dy);
+
+    // Притягивание
+    if (dist < player.magnetRadius) {
+      const force = (1 - dist / player.magnetRadius) * 600;
+      j.x += (dx / dist) * force * dt;
+      j.y += (dy / dist) * force * dt;
     }
-    if (d < player.r + o.r) {
-      player.xp += o.val;
-      addParticles(o.x, o.y, '#f9e2af', 3);
-      orbs.splice(i, 1);
+
+    // Сбор
+    if (dist < 25) {
+      player.scrap += j.value;
+      addFloatingText(j.x, j.y, `+${j.value}`, '#00ffff');
+      addParticles(j.x, j.y, '#00ffff', 8);
+      junk.splice(i, 1);
+      updateHUD();
     }
   }
 
-  // враги
-  for (let i = enemies.length - 1; i >= 0; i--) {
-    const e = enemies[i];
-    if (e.hp <= 0) {
-      addParticles(e.x, e.y, '#f38ba8', 14);
-      for (let k = 0; k < 3; k++)
-        spawnOrb(e.x + (Math.random()-0.5)*40, e.y + (Math.random()-0.5)*40, 2);
-      enemies.splice(i, 1);
-      continue;
+  // Астероиды
+  for (let i = asteroids.length - 1; i >= 0; i--) {
+    const a = asteroids[i];
+    a.x += a.vx * dt;
+    a.y += a.vy * dt;
+    a.rot += a.rotSpeed * dt;
+
+    // Коллизия с игроком
+    const dx = player.x - a.x, dy = player.y - a.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < a.r + 18) {
+      // Отскок
+      const angle = Math.atan2(dy, dx);
+      player.x += Math.cos(angle) * (a.r + 18 - dist);
+      player.y += Math.sin(angle) * (a.r + 18 - dist);
+      player.speed *= 0.5;
+      
+      if (player.damageFlash <= 0) {
+        player.hp -= 15;
+        player.damageFlash = 0.5;
+        addParticles(player.x, player.y, '#f38ba8', 15);
+        updateHUD();
+        if (player.hp <= 0) respawn();
+      }
     }
-    const dx = player.x - e.x, dy = player.y - e.y;
-    const d = Math.hypot(dx, dy) || 1;
-    if (d < 550 && d > player.r + e.r - 4) {
-      e.x += dx/d * e.speed * dt;
-      e.y += dy/d * e.speed * dt;
-    }
-    if (e.attackCd > 0) e.attackCd -= dt;
-    if (d < player.r + e.r && e.attackCd <= 0) {
-      player.hp -= e.damage;
-      e.attackCd = 1;
-      addParticles(player.x, player.y, '#f38ba8', 5);
-      if (player.hp <= 0) { player.hp = 0; gameOver(); return; }
+
+    // Удаление далёких астероидов
+    if (Math.hypot(player.x - a.x, player.y - a.y) > 2500) {
+      asteroids.splice(i, 1);
     }
   }
 
-  // частицы
+  if (player.damageFlash > 0) player.damageFlash -= dt;
+
+  // Обновление частиц
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     p.x += p.vx * dt; p.y += p.vy * dt;
-    p.vx *= 0.94; p.vy *= 0.94;
+    p.vx *= 0.95; p.vy *= 0.95;
     p.life -= dt;
     if (p.life <= 0) particles.splice(i, 1);
   }
 
-  // проверка левелапа
-  if (player.xp >= player.xpNext) {
-    player.xp -= player.xpNext;
-    player.level++;
-    player.xpNext = Math.floor(player.xpNext * 1.4);
-    showUpgrades();
+  // Обновление всплывающего текста
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    const t = floatingTexts[i];
+    t.y -= 40 * dt;
+    t.life -= dt;
+    if (t.life <= 0) floatingTexts.splice(i, 1);
   }
 }
 
-function gameOver() {
-  alive = false;
-  document.getElementById('finalScore').textContent = `Достигнут ${player.level} уровень`;
-  document.getElementById('gameover').style.display = 'flex';
+function respawn() {
+  player.hp = player.maxHp;
+  player.x = 0; player.y = 0; player.speed = 0;
+  player.scrap = Math.floor(player.scrap * 0.8); // Штраф 20% лома
+  updateHUD();
+  addParticles(0, 0, '#f38ba8', 40);
+}
+
+function addParticles(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random()*Math.PI*2, sp = 50 + Math.random()*200;
+    particles.push({ x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp,
+      life: 0.5+Math.random()*0.5, maxLife: 1, color, r: 1+Math.random()*3 });
+  }
+}
+
+function addFloatingText(x, y, text, color) {
+  floatingTexts.push({ x, y, text, color, life: 1 });
 }
 
 // ---------- ОТРИСОВКА ----------
 function render() {
-  ctx.fillStyle = '#0f1117';
+  // Фон
+  ctx.fillStyle = '#050510';
   ctx.fillRect(0, 0, W, H);
 
-  const ox = W/2 - cam.x, oy = H/2 - cam.y;
-  const toX = x => x + ox, toY = y => y + oy;
-  const onScreen = (sx, sy, m=60) => sx > -m && sx < W+m && sy > -m && sy < H+m;
+  const cx = W/2 - player.x;
+  const cy = H/2 - player.y;
 
-  // сетка
-  ctx.strokeStyle = 'rgba(255,255,255,0.035)';
-  ctx.lineWidth = 1;
-  const g = 80;
-  for (let x = Math.floor((cam.x - W/2)/g)*g; x < cam.x + W/2; x += g) {
-    const sx = toX(x); ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); ctx.stroke();
-  }
-  for (let y = Math.floor((cam.y - H/2)/g)*g; y < cam.y + H/2; y += g) {
-    const sy = toY(y); ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(W, sy); ctx.stroke();
-  }
-
-  // декорации (пятна «травы»)
-  for (const d of decorations) {
-    const sx = toX(d.x), sy = toY(d.y);
-    if (!onScreen(sx, sy, d.r)) continue;
-    ctx.fillStyle = `rgba(${d.color},0.06)`;
-    ctx.beginPath(); ctx.arc(sx, sy, d.r, 0, Math.PI*2); ctx.fill();
+  // Звёзды с параллаксом
+  for (const s of stars) {
+    const sx = W/2 + (s.x - player.x * s.z * 0.2);
+    const sy = H/2 + (s.y - player.y * s.z * 0.2);
+    // Зацикливание звёзд
+    const px = ((sx + 1500) % 3000 + 3000) % 3000 - 1500;
+    const py = ((sy + 1500) % 3000 + 3000) % 3000 - 1500;
+    if (px > -W/2 && px < W/2 && py > -H/2 && py < H/2) {
+      ctx.fillStyle = `rgba(255,255,255,${0.3 + s.z*0.3})`;
+      ctx.beginPath(); ctx.arc(W/2 + px, H/2 + py, s.size, 0, Math.PI*2); ctx.fill();
+    }
   }
 
-  // границы мира
-  ctx.strokeStyle = 'rgba(137,180,250,0.35)';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(toX(0), toY(0), WORLD.w, WORLD.h);
+  // Радиус магнита (едва заметный)
+  ctx.strokeStyle = 'rgba(0,255,255,0.05)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(W/2, H/2, player.magnetRadius, 0, Math.PI*2); ctx.stroke();
 
-  // сферы
-  ctx.shadowColor = '#f9e2af';
-  ctx.shadowBlur = 15;
-  ctx.fillStyle = '#f9e2af';
-  for (const o of orbs) {
-    const sx = toX(o.x), sy = toY(o.y);
-    if (!onScreen(sx, sy, 20)) continue;
-    o.pulse += 0.06;
-    const k = 1 + Math.sin(o.pulse) * 0.25;
-    ctx.beginPath(); ctx.arc(sx, sy, o.r * k, 0, Math.PI*2); ctx.fill();
+  // Космический мусор
+  for (const j of junk) {
+    const sx = j.x + cx, sy = j.y + cy;
+    if (sx < -50 || sx > W+50 || sy < -50 || sy > H+50) continue;
+    
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(j.angle);
+    ctx.fillStyle = '#8899aa';
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 1;
+    
+    if (j.type === 'gear') {
+      // Шестерёнка
+      ctx.beginPath();
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        const r1 = j.r, r2 = j.r * 1.3;
+        ctx.lineTo(Math.cos(a)*r1, Math.sin(a)*r1);
+        ctx.lineTo(Math.cos(a+0.2)*r2, Math.sin(a+0.2)*r2);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#050510'; ctx.beginPath(); ctx.arc(0,0,j.r*0.4,0,Math.PI*2); ctx.fill();
+    } else {
+      // Пластина
+      ctx.fillRect(-j.r, -j.r*0.6, j.r*2, j.r*1.2);
+      ctx.strokeRect(-j.r, -j.r*0.6, j.r*2, j.r*1.2);
+      ctx.fillStyle = '#00ffff';
+      ctx.fillRect(-j.r+3, -j.r*0.6+3, 4, 4);
+      ctx.fillRect(j.r-7, j.r*0.6-7, 4, 4);
+    }
+    ctx.restore();
   }
-  ctx.shadowBlur = 0;
 
-  // враги
-  for (const e of enemies) {
-    const sx = toX(e.x), sy = toY(e.y);
-    if (!onScreen(sx, sy)) continue;
-    // тело
-    ctx.fillStyle = '#f38ba8';
-    ctx.beginPath(); ctx.arc(sx, sy, e.r, 0, Math.PI*2); ctx.fill();
-    // глаза
-    ctx.fillStyle = '#11111b';
-    const eo = e.r * 0.35;
-    ctx.beginPath(); ctx.arc(sx - eo, sy - eo*0.6, 2.5, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(sx + eo, sy - eo*0.6, 2.5, 0, Math.PI*2); ctx.fill();
-    // HP
-    const hp = e.hp / e.maxHp;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(sx - e.r, sy - e.r - 10, e.r*2, 4);
-    ctx.fillStyle = '#a6e3a1';
-    ctx.fillRect(sx - e.r, sy - e.r - 10, e.r*2*hp, 4);
+  // Астероиды
+  for (const a of asteroids) {
+    const sx = a.x + cx, sy = a.y + cy;
+    if (sx < -100 || sx > W+100 || sy < -100 || sy > H+100) continue;
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(a.rot);
+    ctx.fillStyle = '#2a2a3a';
+    ctx.strokeStyle = '#444455';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let k = 0; k < 7; k++) {
+      const angle = (k / 7) * Math.PI * 2;
+      const rad = a.r * (0.8 + Math.sin(angle*3)*0.2);
+      if (k === 0) ctx.moveTo(Math.cos(angle)*rad, Math.sin(angle)*rad);
+      else ctx.lineTo(Math.cos(angle)*rad, Math.sin(angle)*rad);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
   }
 
-  // частицы
+  // Частицы
   for (const p of particles) {
-    const sx = toX(p.x), sy = toY(p.y);
-    if (!onScreen(sx, sy, 10)) continue;
-    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
     ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(sx, sy, p.r, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x + cx, p.y + cy, p.r, 0, Math.PI*2); ctx.fill();
   }
   ctx.globalAlpha = 1;
 
-  // игрок
-  const px = toX(player.x), py = toY(player.y);
+  // Всплывающий текст
+  for (const t of floatingTexts) {
+    ctx.globalAlpha = Math.max(0, t.life);
+    ctx.fillStyle = t.color;
+    ctx.font = 'bold 16px "Courier New"';
+    ctx.textAlign = 'center';
+    ctx.fillText(t.text, t.x + cx, t.y + cy);
+  }
+  ctx.globalAlpha = 1;
 
-  // магнит (едва заметный круг)
-  ctx.strokeStyle = 'rgba(166,227,161,0.12)';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(px, py, player.magnet, 0, Math.PI*2); ctx.stroke();
+  // ИГРОК (Корабль)
+  drawShip(W/2, H/2, player.angle);
 
-  // вспышка атаки
-  if (attackFlash > 0) {
-    ctx.fillStyle = `rgba(137,180,250,${attackFlash * 2.5})`;
-    ctx.beginPath(); ctx.arc(px, py, player.attackRange, 0, Math.PI*2); ctx.fill();
+  // Мигание при уроне
+  if (player.damageFlash > 0 && Math.floor(player.damageFlash * 10) % 2 === 0) {
+    ctx.fillStyle = 'rgba(243,139,168,0.2)';
+    ctx.fillRect(0,0,W,H);
   }
 
-  // тело игрока с градиентом
-  const grd = ctx.createRadialGradient(px - 6, py - 6, 3, px, py, player.r);
-  grd.addColorStop(0, '#b4e8f5');
-  grd.addColorStop(1, '#74c7ec');
-  ctx.fillStyle = grd;
-  ctx.beginPath(); ctx.arc(px, py, player.r, 0, Math.PI*2); ctx.fill();
-
-  // глаза
-  ctx.fillStyle = '#11111b';
-  ctx.beginPath(); ctx.arc(px - 5, py - 3, 3.2, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(px + 5, py - 3, 3.2, 0, Math.PI*2); ctx.fill();
-
-  drawMinimap(toX, toY);
+  // Радар (мини-карта)
+  drawRadar();
 }
 
-function drawMinimap() {
-  const mm = 150, pad = 16;
-  const mx = W - mm - pad, my = H - mm - pad;
+function drawShip(x, y, angle) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
 
-  ctx.fillStyle = 'rgba(17,17,27,0.8)';
-  ctx.strokeStyle = 'rgba(137,180,250,0.4)';
+  const lvl = player.lvlHull;
+  const eng = player.lvlEngine;
+  
+  // Цвета
+  const hullColor = '#1e3a5f';
+  const accentColor = '#00ffff';
+  
+  ctx.shadowColor = accentColor;
+  ctx.shadowBlur = 10;
+
+  // --- КОРПУС (Центр) ---
+  ctx.fillStyle = hullColor;
+  ctx.strokeStyle = accentColor;
   ctx.lineWidth = 2;
+  
+  // Основной блок (прямоугольник со скруглением)
   ctx.beginPath();
-  ctx.roundRect(mx, my, mm, mm, 14);
+  ctx.roundRect(-15, -20, 30, 40, 8);
   ctx.fill(); ctx.stroke();
 
-  const sx = mm / WORLD.w, sy = mm / WORLD.h;
-
-  // враги
-  ctx.fillStyle = 'rgba(243,139,168,0.6)';
-  for (const e of enemies) {
-    ctx.beginPath();
-    ctx.arc(mx + e.x * sx, my + e.y * sy, 1.5, 0, Math.PI*2);
-    ctx.fill();
-  }
-  // игрок
-  ctx.fillStyle = '#89dceb';
+  // Кабина
+  ctx.fillStyle = '#74c7ec';
   ctx.beginPath();
-  ctx.arc(mx + player.x * sx, my + player.y * sy, 3.5, 0, Math.PI*2);
+  ctx.arc(0, -5, 6, 0, Math.PI*2);
   ctx.fill();
+
+  // --- КРЫЛЬЯ (Улучшение 2) ---
+  if (lvl >= 2) {
+    ctx.fillStyle = '#2a2a3a';
+    // Левое крыло
+    ctx.beginPath();
+    ctx.moveTo(-15, -10);
+    ctx.lineTo(-40, -20);
+    ctx.lineTo(-40, 10);
+    ctx.lineTo(-15, 15);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Правое крыло
+    ctx.beginPath();
+    ctx.moveTo(15, -10);
+    ctx.lineTo(40, -20);
+    ctx.lineTo(40, 10);
+    ctx.lineTo(15, 15);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    // Пушки на крыльях
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(-38, -8, 4, 12);
+    ctx.fillRect(34, -8, 4, 12);
+  }
+
+  // --- НОСОВЫЕ АНТЕННЫ / УСИКИ (Улучшение 3) ---
+  if (lvl >= 3) {
+    ctx.strokeStyle = '#f9e2af';
+    ctx.lineWidth = 2;
+    // Левый ус
+    ctx.beginPath();
+    ctx.moveTo(-8, -20);
+    ctx.lineTo(-15, -35);
+    ctx.lineTo(-8, -40);
+    ctx.stroke();
+    // Правый ус
+    ctx.beginPath();
+    ctx.moveTo(8, -20);
+    ctx.lineTo(15, -35);
+    ctx.lineTo(8, -40);
+    ctx.stroke();
+    
+    // Сенсоры на усах
+    ctx.fillStyle = '#f38ba8';
+    ctx.beginPath(); ctx.arc(-8, -40, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(8, -40, 3, 0, Math.PI*2); ctx.fill();
+  }
+
+  // --- ДВИГАТЕЛИ (Зависят от lvlEngine) ---
+  const engCount = Math.min(3, eng);
+  for (let i = 0; i < engCount; i++) {
+    const ex = -10 + i * 10;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(ex - 3, 20, 6, 8);
+    ctx.fillStyle = accentColor;
+    ctx.fillRect(ex - 2, 28, 4, 4);
+  }
+
+  ctx.restore();
 }
 
-// ---------- HUD ----------
-const hpFill = document.getElementById('hpFill');
+function drawRadar() {
+  const rw = 150, rh = 150, pad = 20;
+  const rx = W - rw - pad, ry = H - rh - pad;
+
+  ctx.fillStyle = 'rgba(5,10,25,0.8)';
+  ctx.strokeStyle = 'rgba(0,255,255,0.3)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(rx + rw/2, ry + rh/2, rw/2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+  const scale = rw / 2000; // 2000 единиц мира
+  const rcx = rx + rw/2, rcy = ry + rh/2;
+
+  // Мусор
+  ctx.fillStyle = '#00ffff';
+  for (const j of junk) {
+    const dx = (j.x - player.x) * scale, dy = (j.y - player.y) * scale;
+    if (Math.hypot(dx, dy) < rw/2) {
+      ctx.beginPath(); ctx.arc(rcx + dx, rcy + dy, 1.5, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  // Астероиды
+  ctx.fillStyle = '#f38ba8';
+  for (const a of asteroids) {
+    const dx = (a.x - player.x) * scale, dy = (a.y - player.y) * scale;
+    if (Math.hypot(dx, dy) < rw/2) {
+      ctx.beginPath(); ctx.arc(rcx + dx, rcy + dy, 2.5, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  // Игрок
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(rcx, rcy, 3, 0, Math.PI*2); ctx.fill();
+}
+
+// ---------- UI И УЛУЧШЕНИЯ ----------
+const scrapText = document.getElementById('scrapText');
 const hpText = document.getElementById('hpText');
-const xpFill = document.getElementById('xpFill');
-const xpText = document.getElementById('xpText');
-const levelText = document.getElementById('levelText');
+const hpFill = document.getElementById('hpFill');
 
 function updateHUD() {
+  scrapText.textContent = player.scrap;
+  hpText.textContent = `${Math.ceil(player.hp)}/${player.maxHp}`;
   hpFill.style.width = (player.hp / player.maxHp * 100) + '%';
-  hpText.textContent = `${Math.ceil(player.hp)} / ${player.maxHp}`;
-  xpFill.style.width = (player.xp / player.xpNext * 100) + '%';
-  xpText.textContent = `${player.xp} / ${player.xpNext}`;
-  levelText.textContent = player.level;
 }
+
+// Конфигурация апгрейдов
+const upgrades = [
+  { id: 'hull', name: 'Корпус', icon: '🛡️', desc: 'Увеличивает макс. HP и визуал',
+    cost: () => 50 + player.lvlHull * 100,
+    maxLvl: 3,
+    apply: () => { player.lvlHull++; player.maxHp += 50; player.hp = player.maxHp; } },
+  { id: 'engine', name: 'Двигатели', icon: '🚀', desc: 'Увеличивает скорость и ускорение',
+    cost: () => 40 + player.lvlEngine * 80,
+    maxLvl: 3,
+    apply: () => { player.lvlEngine++; player.maxSpeed += 100; player.accel += 200; } },
+  { id: 'magnet', name: 'Магнит', icon: '🧲', desc: 'Увеличивает радиус сбора',
+    cost: () => 60 + player.lvlMagnet * 120,
+    maxLvl: 5,
+    apply: () => { player.lvlMagnet++; player.magnetRadius += 60; } },
+];
+
+function toggleMenu() {
+  menuOpen = !menuOpen;
+  const menu = document.getElementById('upgradeMenu');
+  if (menuOpen) {
+    menu.style.display = 'flex';
+    renderUpgrades();
+  } else {
+    menu.style.display = 'none';
+  }
+}
+
+function renderUpgrades() {
+  document.getElementById('scrapInMenu').textContent = player.scrap;
+  const grid = document.getElementById('upgradeGrid');
+  grid.innerHTML = '';
+
+  upgrades.forEach(u => {
+    const lvl = u.id === 'hull' ? player.lvlHull : u.id === 'engine' ? player.lvlEngine : player.lvlMagnet;
+    const cost = u.cost();
+    const isMax = lvl >= u.maxLvl;
+    const canAfford = player.scrap >= cost;
+
+    const card = document.createElement('div');
+    card.className = 'upg-card' + (!canAfford || isMax ? ' disabled' : '');
+    
+    card.innerHTML = `
+      <span class="upg-icon">${u.icon}</span>
+      <strong>${u.name} (Ур. ${lvl}/${u.maxLvl})</strong>
+      <div class="desc">${u.desc}</div>
+      <div class="cost">${isMax ? 'МАКС. УРОВЕНЬ' : 'Стоимость: ' + cost}</div>
+    `;
+
+    if (canAfford && !isMax) {
+      card.onclick = () => {
+        player.scrap -= cost;
+        u.apply();
+        updateHUD();
+        renderUpgrades(); // Перерисовать меню
+        addParticles(player.x, player.y, '#00ffff', 30);
+      };
+    }
+    grid.appendChild(card);
+  });
+}
+
+// Запуск
+updateHUD();
 </script>
 </body>
 </html>
