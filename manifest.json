@@ -1,0 +1,10 @@
+{
+  "name": "Выживание",
+  "short_name": "Присутствует",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0a0e14",
+  "theme_color": "#0a0e14",
+  "icons": []
+}
